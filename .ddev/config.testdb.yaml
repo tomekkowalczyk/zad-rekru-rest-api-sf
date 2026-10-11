@@ -1,0 +1,6 @@
+# The `db` user cannot create schemas, so the test database is provisioned once
+# at container start. Keeps `ddev start && ddev exec composer qa` working on a
+# fresh clone.
+hooks:
+  post-start:
+    - exec-host: ddev mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS db_test; GRANT ALL ON db_test.* TO 'db'@'%';"

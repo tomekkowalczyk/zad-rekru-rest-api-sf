@@ -1,0 +1,160 @@
+# Deptrac guards the modular-monolith boundaries. Two dimensions are folded into
+# one set of layers (module x layer) so a class never belongs to two layers.
+parameters:
+    paths:
+        - ./src
+    layers:
+        - name: SharedDomain
+          collectors:
+              - type: directory
+                value: src/Shared/Domain/.*
+        - name: SharedInfrastructure
+          collectors:
+              - type: directory
+                value: src/Shared/Infrastructure/.*
+
+        - name: CatalogDomain
+          collectors:
+              - type: directory
+                value: src/Catalog/Domain/.*
+        - name: CatalogApplication
+          collectors:
+              - type: directory
+                value: src/Catalog/Application/.*
+        - name: CatalogInfrastructure
+          collectors:
+              - type: directory
+                value: src/Catalog/Infrastructure/.*
+
+        - name: NotificationDomain
+          collectors:
+              - type: directory
+                value: src/Notification/Domain/.*
+        - name: NotificationApplication
+          collectors:
+              - type: directory
+                value: src/Notification/Application/.*
+        - name: NotificationInfrastructure
+          collectors:
+              - type: directory
+                value: src/Notification/Infrastructure/.*
+
+        - name: SecurityDomain
+          collectors:
+              - type: directory
+                value: src/Security/Domain/.*
+        - name: SecurityInfrastructure
+          collectors:
+              - type: directory
+                value: src/Security/Infrastructure/.*
+
+        # Vendor layers keep the domain honest.
+        - name: Doctrine
+          collectors:
+              - type: classNameRegex
+                value: '#^Doctrine\\.*#'
+        # Kept apart from Doctrine: the bridge brings validation constraints
+        # (UniqueEntity) that belong to the API boundary, not the domain.
+        - name: DoctrineBridge
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Bridge\\Doctrine\\.*#'
+        - name: Validator
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\Validator\\.*#'
+        - name: Serializer
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\Serializer\\.*#'
+        - name: DependencyInjection
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\DependencyInjection\\.*#'
+        - name: ApiPlatform
+          collectors:
+              - type: classNameRegex
+                value: '#^ApiPlatform\\.*#'
+        - name: Messenger
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\Messenger\\.*#'
+        - name: Http
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\(HttpFoundation|HttpKernel|RateLimiter)\\.*#'
+        - name: SymfonySecurity
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\(Security|PasswordHasher)\\.*#'
+        - name: Mailer
+          collectors:
+              - type: classNameRegex
+                value: '#^Symfony\\Component\\(Mailer|Mime)\\.*#'
+
+    ruleset:
+        # Domain layers may only know their own module, Shared domain and the
+        # ORM mapping attributes (persistence-annotated entities are a conscious
+        # trade-off, see ADR-0002). Validation, serialisation and container
+        # wiring are deliberately absent: they belong to the boundaries.
+        SharedDomain:
+            - Doctrine
+        CatalogDomain:
+            - SharedDomain
+            - Doctrine
+        NotificationDomain:
+            - SharedDomain
+        # The Symfony security contracts are the one framework concept the
+        # user model cannot avoid implementing.
+        SecurityDomain:
+            - SharedDomain
+            - Doctrine
+            - SymfonySecurity
+
+        # Application orchestrates its own domain and may consume the
+        # notification *contract* (interfaces live in Notification\Domain).
+        # Container attributes are tolerated here: they only wire, never run.
+        CatalogApplication:
+            - CatalogDomain
+            - SharedDomain
+            - NotificationDomain
+            - Messenger
+            - DependencyInjection
+        NotificationApplication:
+            - NotificationDomain
+            - SharedDomain
+            - Messenger
+            - DependencyInjection
+
+        # Infrastructure is the only place allowed to touch frameworks.
+        SharedInfrastructure:
+            - SharedDomain
+            - Doctrine
+            - Messenger
+            - Http
+            - SymfonySecurity
+            - DependencyInjection
+        CatalogInfrastructure:
+            - CatalogDomain
+            - CatalogApplication
+            - SharedDomain
+            - Doctrine
+            - ApiPlatform
+            - Http
+            - Validator
+            - Serializer
+            - DependencyInjection
+        NotificationInfrastructure:
+            - NotificationDomain
+            - SharedDomain
+            - Doctrine
+            - Mailer
+            - DependencyInjection
+        SecurityInfrastructure:
+            - SecurityDomain
+            - SharedDomain
+            - Doctrine
+            - ApiPlatform
+            - Http
+            - SymfonySecurity
+            - DependencyInjection

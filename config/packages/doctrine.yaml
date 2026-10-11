@@ -1,0 +1,56 @@
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'
+        types:
+            # Every timestamp is stored in UTC, whatever the PHP time zone of
+            # the writing process (web and worker containers differ).
+            datetime_immutable: App\Shared\Infrastructure\Doctrine\Type\UtcDateTimeImmutableType
+    orm:
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore
+        auto_mapping: false
+        mappings:
+            Catalog:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Catalog/Domain/Entity'
+                prefix: 'App\Catalog\Domain\Entity'
+            Notification:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Notification/Infrastructure/Doctrine/Entity'
+                prefix: 'App\Notification\Infrastructure\Doctrine\Entity'
+            Security:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Security/Domain'
+                prefix: 'App\Security\Domain'
+            SharedValueObject:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Shared/Domain/ValueObject'
+                prefix: 'App\Shared\Domain\ValueObject'
+
+when@test:
+    doctrine:
+        dbal:
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system

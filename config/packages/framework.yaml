@@ -1,0 +1,23 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    # Pure REST API: no server side session, the JWT carries the identity.
+    session: false
+    http_method_override: false
+
+    rate_limiter:
+        # Generic protection of the public API surface.
+        api:
+            policy: 'sliding_window'
+            limit: 300
+            interval: '1 minute'
+
+when@test:
+    framework:
+        test: true
+        rate_limiter:
+            api:
+                policy: 'sliding_window'
+                limit: 100000
+                interval: '1 minute'

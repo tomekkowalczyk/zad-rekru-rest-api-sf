@@ -1,0 +1,34 @@
+includes:
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-symfony/rules.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+    - vendor/phpstan/phpstan-doctrine/rules.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
+
+parameters:
+    level: max
+    phpVersion:
+        min: 80500
+        max: 80599
+    paths:
+        - src
+        - tests
+    treatPhpDocTypesAsCertain: false
+    checkMissingCallableSignature: true
+    checkUninitializedProperties: true
+    reportAnyTypeWideningInVarTag: true
+
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+        consoleApplicationLoader: tests/console-application.php
+
+    doctrine:
+        objectManagerLoader: tests/object-manager.php
+
+    ignoreErrors:
+        # Doctrine hydrates these through reflection, before any code runs.
+        -
+            message: '#Class App\\(Catalog\\Domain\\Entity|Security\\Domain)\\[A-Za-z]+ has an uninitialized property \$(createdAt|updatedAt)\.#'
+            path: src

@@ -1,0 +1,38 @@
+# Dedicated container running the Messenger worker that drains the database
+# queue (operation log + e-mail notifications).
+#
+#   ddev logs -s worker -f      # follow deliveries
+#   ddev restart                # pick up code changes
+services:
+  worker:
+    container_name: ddev-${DDEV_SITENAME}-worker
+    image: ${DDEV_WEBIMAGE}
+    restart: "no"
+    user: "$DDEV_UID:$DDEV_GID"
+    working_dir: /var/www/html
+    # Single-line on purpose: DDEV re-renders this file and folds block
+    # scalars, which would silently turn the loop into dead code.
+    # php8.5 explicitly: the web image bundles several PHP versions and this
+    # custom service does not inherit DDEV_PHP_VERSION, so a bare `php` would
+    # resolve to the image default (8.4) and die on Composer's platform_check.
+    command: ["bash", "-c", "until php8.5 bin/console dbal:run-sql 'SELECT 1' >/dev/null 2>&1; do sleep 2; done; exec php8.5 bin/console messenger:consume async --time-limit=3600 --memory-limit=256M -v"]
+    volumes:
+      - type: bind
+        source: ../
+        target: /var/www/html
+        consistency: cached
+      - ".:/mnt/ddev_config"
+      - "ddev-global-cache:/mnt/ddev-global-cache"
+    environment:
+      - APP_ENV=dev
+    # The image ships a web-server healthcheck; this container only runs a
+    # worker, so DDEV would wait forever for a port that never opens.
+    healthcheck:
+      disable: true
+    depends_on:
+      - db
+    labels:
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: $DDEV_APPROOT
+    external_links:
+      - "ddev-router:${DDEV_HOSTNAME}"

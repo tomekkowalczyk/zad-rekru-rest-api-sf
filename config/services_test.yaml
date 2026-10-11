@@ -1,0 +1,24 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: true
+
+    App\Tests\Behat\:
+        resource: '../tests/Behat/*'
+
+    App\Tests\Support\QueryCounter:
+        tags: ['doctrine.middleware']
+
+    App\Tests\Behat\ApiContext:
+        arguments:
+            $client: '@test.client'
+
+    App\Tests\Behat\CatalogContext:
+        arguments:
+            $notificationQueue: '@messenger.transport.async'
+
+    App\Tests\Support\ObservableNotificationDispatcher:
+        decorates: App\Notification\Domain\NotificationDispatcher
+        arguments:
+            $inner: '@.inner'

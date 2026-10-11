@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+parameters:
+    app.notification.sender_email: '%env(NOTIFICATION_SENDER_EMAIL)%'
+    app.notification.sender_name: '%env(NOTIFICATION_SENDER_NAME)%'
+    # Comma separated list, e.g. "ops@example.com,shop@example.com".
+    app.notification.catalog_recipients: '%env(csv:NOTIFICATION_CATALOG_RECIPIENTS)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            $notificationLogger: '@monolog.logger.notification'
+
+    # Tagged here rather than with an attribute on the interface, so the
+    # domain contract does not depend on the DI component.
+    _instanceof:
+        App\Notification\Domain\NotificationChannel:
+            tags: ['app.notification_channel']
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/*/Domain/Entity/'
+            - '../src/*/Domain/Event/'
+            - '../src/*/Domain/Exception/'
+            - '../src/*/Domain/ValueObject/'
+            - '../src/Security/Domain/User.php'
+            - '../src/Notification/Domain/Notification.php'
+            - '../src/Notification/Application/Command/'
+            - '../src/Notification/Infrastructure/Doctrine/Entity/'
+            - '../src/Shared/Domain/'
+
+    # Domain contracts -> Doctrine implementations.
+    App\Catalog\Domain\Repository\ProductRepository: '@App\Catalog\Infrastructure\Doctrine\Repository\DoctrineProductRepository'
+    App\Catalog\Domain\Repository\CategoryRepository: '@App\Catalog\Infrastructure\Doctrine\Repository\DoctrineCategoryRepository'
+    App\Notification\Domain\NotificationDispatcher: '@App\Notification\Application\AsyncNotificationDispatcher'

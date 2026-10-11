@@ -1,0 +1,39 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"],
+        // The kernel is framework boilerplate with no logic of our own.
+        "excludes": ["Kernel.php"]
+    },
+    // Scratch files stay under the project: the host's /tmp is not the container's.
+    "tmpDir": "var/infection",
+    "phpUnit": {
+        "configDir": "."
+    },
+    // Xdebug ships with DDEV but is disabled for speed; load it only for the
+    // initial coverage run instead of slowing down every `ddev exec`.
+    "initialTestsPhpOptions": "-d zend_extension=xdebug -d xdebug.mode=coverage",
+    // Every surviving mutant is either a missing test or an explicit, commented
+    // ignore below — there is no tolerated backlog.
+    "minMsi": 100,
+    "minCoveredMsi": 100,
+    "logs": {
+        "text": "var/infection/infection.log",
+        "html": "var/infection/infection.html",
+        "summary": "var/infection/summary.log"
+    },
+    "mutators": {
+        "@default": true,
+        "global-ignoreSourceCodeByRegex": [
+            // Mapping attributes are read by Doctrine, never executed, so no
+            // test "covers" them and Infection cannot route a mutant to the
+            // test that guards them (DatabaseSchemaTest).
+            ".*#\\[ORM\\\\.*"
+        ],
+        "ReturnRemoval": {
+            // Equivalent mutant: the early return only skips a loop over an
+            // empty channel list, so removing it changes nothing observable.
+            "ignore": ["App\\Notification\\Application\\AsyncNotificationDispatcher::dispatch"]
+        }
+    }
+}

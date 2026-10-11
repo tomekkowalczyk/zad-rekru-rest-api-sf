@@ -1,0 +1,40 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        buses:
+            # Domain events published after a successful commit. Handled
+            # in-process: handlers only decide *what* to notify about.
+            eventBus:
+                default_middleware:
+                    enabled: true
+                    allow_no_handlers: true
+            # Actual work units. Routed to the database queue.
+            commandBus: ~
+
+        default_bus: commandBus
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: notifications
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 3
+                    max_delay: 60000
+            failed:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: failed
+
+        routing:
+            App\Notification\Application\Command\SendNotification: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'
+                failed: 'in-memory://'
